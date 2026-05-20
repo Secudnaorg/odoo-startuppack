@@ -9,7 +9,21 @@ Base **`odoo:19`** + :
 | Élément | Chemin dans l'image | Source |
 |---|---|---|
 | `python-jose[cryptography]` | site-packages | pip (dép. d'`auth_oidc`) |
-| `auth_oidc` | `/opt/oca-addons/auth_oidc` | [OCA/server-auth@19.0](https://github.com/OCA/server-auth/tree/19.0/auth_oidc) — vrai client OpenID Connect |
+| **Bundle OCA** | `/opt/oca-addons/` (à plat) | dépôts OCA populaires, branche 19.0 |
+
+Les dépôts OCA clonés (branche `19.0`, clone tolérant — un dépôt pas encore
+porté sur 19.0 est ignoré) :
+
+`server-auth` (dont `auth_oidc`), `server-tools`, `server-ux`, `server-brand`,
+`web` (dont `web_responsive`), `partner-contact`, `reporting-engine`, `queue`,
+`social`, `crm`, `contract`, `account-financial-tools`,
+`account-financial-reporting`, `account-invoicing`, `bank-payment`,
+`sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`,
+`project`, `mis-builder`.
+
+⚠️ Les modules sont **disponibles, pas installés** — un admin les active
+depuis Odoo > Apps. Certains modules réclament des paquets Python
+supplémentaires (`external_dependencies`) à ajouter au besoin.
 
 ## Build
 
