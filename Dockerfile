@@ -19,7 +19,7 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends git ca-certificates; \
     for repo in \
-        server-auth server-tools server-ux server-brand web \
+        server-auth server-tools server-ux server-brand web website \
         partner-contact reporting-engine queue social crm contract \
         account-financial-tools account-financial-reporting account-invoicing \
         bank-payment sale-workflow purchase-workflow \
