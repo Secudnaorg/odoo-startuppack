@@ -14,20 +14,23 @@ Base **`odoo:19`** + :
 
 ## Build
 
-Automatique via GitHub Actions (`.github/workflows/build-image.yml`) à chaque push sur `main` ou tag `v*` :
+Automatique via GitHub Actions (`.github/workflows/build-image.yml`) à chaque
+push sur `main` — poussé sur **Harbor**, comme l'image `onboarding_platform` :
 
 ```
-ghcr.io/startuppack/odoo-custom:latest
-ghcr.io/startuppack/odoo-custom:main
-ghcr.io/startuppack/odoo-custom:<sha>
-ghcr.io/startuppack/odoo-custom:<version>   # sur tag vX.Y.Z
+public-harbor.gottaphish.com/startuppack/odoo-custom:latest
+public-harbor.gottaphish.com/startuppack/odoo-custom:<sha7>
 ```
+
+Requiert les secrets `HARBOR_USERNAME` / `HARBOR_PASSWORD` (secrets
+d'organisation, ou à ajouter au repo).
 
 ## Utilisation côté chart
 
-Dans `dna-platform`, pointer `odoo.image` sur `ghcr.io/startuppack/odoo-custom:latest`
-et ajouter `/opt/oca-addons` à `--addons-path`. Installer `auth_oidc` via `-i`
+Dans `dna-platform`, pointer `odoo.image` sur
+`public-harbor.gottaphish.com/startuppack/odoo-custom:latest` et ajouter
+`/opt/oca-addons` à `--addons-path`. Installer `auth_oidc` via `-i`
 (`auth_oauth_fix` a `auto_install: true`).
 
-⚠️ Le package GHCR doit être **public**, ou un `imagePullSecret` GHCR doit être
-ajouté aux namespaces des tenants.
+Le pull est couvert par l'`imagePullSecret` Harbor existant
+(`harbor-startuppack-pull`) déjà présent dans les namespaces tenants.
