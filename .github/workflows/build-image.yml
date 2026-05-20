@@ -41,17 +41,21 @@ jobs:
           CUSTOM_TAG: ${{ inputs.tag }}
         run: |
           image_name="$(echo "${GITHUB_REPOSITORY#*/}" | tr '[:upper:]' '[:lower:]')"
+          image="${REGISTRY}/${HARBOR_PROJECT}/${image_name}"
           short_sha="${GITHUB_SHA::7}"
+          # Tag = nom de la branche (les '/' éventuels -> '-' pour rester valide).
+          branch_tag="$(echo "${GITHUB_REF_NAME}" | tr '/' '-')"
 
-          tags="${REGISTRY}/${HARBOR_PROJECT}/${image_name}:${short_sha}"
+          # Tags publiés : <sha7> + <branche> (ex. main) + latest sur main.
+          tags="${image}:${short_sha},${image}:${branch_tag}"
           if [[ "${GITHUB_REF_NAME}" == "main" ]]; then
-            tags="${tags},${REGISTRY}/${HARBOR_PROJECT}/${image_name}:latest"
+            tags="${tags},${image}:latest"
           fi
           if [[ -n "${CUSTOM_TAG}" ]]; then
-            tags="${tags},${REGISTRY}/${HARBOR_PROJECT}/${image_name}:${CUSTOM_TAG}"
+            tags="${tags},${image}:${CUSTOM_TAG}"
           fi
 
-          echo "image=${REGISTRY}/${HARBOR_PROJECT}/${image_name}" >> "$GITHUB_OUTPUT"
+          echo "image=${image}" >> "$GITHUB_OUTPUT"
           echo "tags=${tags}" >> "$GITHUB_OUTPUT"
 
       - name: Login to Harbor
