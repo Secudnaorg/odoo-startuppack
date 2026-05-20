@@ -1,6 +1,6 @@
 # Image Odoo personnalisée Startup Pack.
-# Base Odoo 19 + SSO OpenID Connect (OCA auth_oidc) + addon maison de
-# mapping des rôles Keycloak. Construite par GitHub Actions.
+# Base Odoo 19 + SSO OpenID Connect via le module OCA auth_oidc.
+# Construite par GitHub Actions.
 FROM odoo:19
 
 USER root
@@ -21,11 +21,7 @@ RUN set -eux; \
     rm -rf /tmp/server-auth; \
     apt-get purge -y git; apt-get autoremove -y; rm -rf /var/lib/apt/lists/*
 
-# Addon maison : mapping rôles Keycloak -> groupes Odoo (+ fix historique).
-COPY addons/ /opt/oca-addons/
-
-# Les addons baked-in sont dans /opt/oca-addons : à ajouter à --addons-path
-# côté chart (en plus de /mnt/extra-addons).
+# /opt/oca-addons (auth_oidc) à ajouter à --addons-path côté chart.
 RUN chown -R odoo:odoo /opt/oca-addons
 
 USER odoo

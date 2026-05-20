@@ -10,7 +10,6 @@ Base **`odoo:19`** + :
 |---|---|---|
 | `python-jose[cryptography]` | site-packages | pip (dép. d'`auth_oidc`) |
 | `auth_oidc` | `/opt/oca-addons/auth_oidc` | [OCA/server-auth@19.0](https://github.com/OCA/server-auth/tree/19.0/auth_oidc) — vrai client OpenID Connect |
-| `auth_oauth_fix` | `/opt/oca-addons/auth_oauth_fix` | addon maison — mapping rôles Keycloak → groupes Odoo |
 
 ## Build
 
@@ -29,8 +28,7 @@ d'organisation, ou à ajouter au repo).
 
 Dans `dna-platform`, pointer `odoo.image` sur
 `public-harbor.gottaphish.com/startuppack/odoo-custom:latest` et ajouter
-`/opt/oca-addons` à `--addons-path`. Installer `auth_oidc` via `-i`
-(`auth_oauth_fix` a `auto_install: true`).
+`/opt/oca-addons` à `--addons-path`. Installer `auth_oidc` via `-i`.
 
 Le pull est couvert par l'`imagePullSecret` Harbor existant
 (`harbor-startuppack-pull`) déjà présent dans les namespaces tenants.
