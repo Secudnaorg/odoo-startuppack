@@ -15,11 +15,15 @@ Les dépôts OCA clonés (branche `19.0`, clone tolérant — un dépôt pas enc
 porté sur 19.0 est ignoré) :
 
 `server-auth` (dont `auth_oidc`), `server-tools`, `server-ux`, `server-brand`,
-`web` (dont `web_responsive`), `partner-contact`, `reporting-engine`, `queue`,
-`social`, `crm`, `contract`, `account-financial-tools`,
+`web` (dont `web_responsive`), `website`, `partner-contact`,
+`reporting-engine`, `queue`, `social`, `mail`, `knowledge`, `crm`, `contract`
+(dont `subscription_oca`), `account-financial-tools`,
 `account-financial-reporting`, `account-invoicing`, `bank-payment`,
 `sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`,
 `project`, `mis-builder`.
+
+Couvre les 10 dépôts de la [liste « must-have OCA »](https://www.odoo-community.org/list-of-must-have-oca-modules)
+(`web_responsive`, `mail_debrand`, `queue_job`, `report_xlsx`, …).
 
 ⚠️ Les modules sont **disponibles, pas installés** — un admin les active
 depuis Odoo > Apps. Certains modules réclament des paquets Python
