@@ -37,6 +37,12 @@ RUN set -eux; \
     apt-get purge -y git; apt-get autoremove -y; \
     rm -rf /var/lib/apt/lists/* /tmp/oca-*
 
+# Addons maison Startup Pack (déposés dans le même /opt/oca-addons déjà sur le
+# --addons-path). `sp_auth_oidc_roles` mappe les rôles Keycloak du token OIDC
+# vers les groupes Odoo AU LOGIN (admin/interne) — installé/maj côté chart via
+# `-i/-u sp_auth_oidc_roles`.
+COPY addons/ /opt/oca-addons/
+
 # /opt/oca-addons à ajouter à --addons-path côté chart (en plus de
 # /mnt/extra-addons). Le module auth_oidc en fait partie (dépôt server-auth).
 RUN chown -R odoo:odoo /opt/oca-addons
