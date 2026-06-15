@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - main
+      - odoo-18-pdp
   workflow_dispatch:
     inputs:
       tag:
