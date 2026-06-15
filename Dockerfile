@@ -1,7 +1,10 @@
 # Image Odoo personnalisée Startup Pack.
-# Base Odoo 19 + SSO OpenID Connect (OCA auth_oidc) + un bundle des
-# dépôts OCA les plus populaires. Construite par GitHub Actions.
-FROM odoo:19
+# Base Odoo 18 + SSO OpenID Connect (OCA auth_oidc) + un bundle des
+# dépôts OCA les plus populaires, dont les abonnements (subscription_oca,
+# dépôt `contract`) et la facturation électronique FR / PDP (Factur-X,
+# Chorus Pro, EDI — dépôts `l10n-france`, `edi`, `edi-framework`).
+# Construite par GitHub Actions.
+FROM odoo:18
 
 USER root
 
@@ -13,8 +16,11 @@ RUN pip3 install --no-cache-dir --break-system-packages "python-jose[cryptograph
 # ils sont seulement disponibles — un admin les active depuis Odoo > Apps.
 RUN mkdir -p /opt/oca-addons
 
-# Dépôts OCA populaires, branche 19.0. Clone TOLÉRANT : un dépôt pas encore
-# porté sur 19.0 est simplement ignoré (le portage OCA 19.0 est en cours).
+# Dépôts OCA populaires, branche 18.0. Clone TOLÉRANT : un dépôt pas encore
+# porté sur 18.0 est simplement ignoré.
+#  - `contract` fournit subscription_oca (ABONNEMENTS).
+#  - `l10n-france`, `edi`, `edi-framework` fournissent la FACTURATION
+#    ÉLECTRONIQUE FR / PDP (Factur-X, Chorus Pro, cadre EDI account_edi).
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends git ca-certificates; \
@@ -24,13 +30,14 @@ RUN set -eux; \
         crm contract \
         account-financial-tools account-financial-reporting account-invoicing \
         bank-payment sale-workflow purchase-workflow \
-        stock-logistics-warehouse hr project mis-builder ; do \
-      if git clone --depth 1 --branch 19.0 "https://github.com/OCA/$repo.git" "/tmp/oca-$repo" 2>/dev/null; then \
+        stock-logistics-warehouse hr project mis-builder \
+        l10n-france edi edi-framework ; do \
+      if git clone --depth 1 --branch 18.0 "https://github.com/OCA/$repo.git" "/tmp/oca-$repo" 2>/dev/null; then \
         cp -rn /tmp/oca-$repo/*/ /opt/oca-addons/ 2>/dev/null || true; \
         rm -rf "/tmp/oca-$repo"; \
-        echo "OCA $repo : cloné (19.0)"; \
+        echo "OCA $repo : cloné (18.0)"; \
       else \
-        echo "OCA $repo : pas de branche 19.0 — ignoré"; \
+        echo "OCA $repo : pas de branche 18.0 — ignoré"; \
       fi; \
     done; \
     rm -rf /opt/oca-addons/setup /opt/oca-addons/.github; \

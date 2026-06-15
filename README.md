@@ -4,23 +4,25 @@ Image Odoo personnalisée utilisée par le chart `dna-platform`.
 
 ## Contenu
 
-Base **`odoo:19`** + :
+Base **`odoo:18`** + :
 
 | Élément | Chemin dans l'image | Source |
 |---|---|---|
 | `python-jose[cryptography]` | site-packages | pip (dép. d'`auth_oidc`) |
-| **Bundle OCA** | `/opt/oca-addons/` (à plat) | dépôts OCA populaires, branche 19.0 |
+| **Bundle OCA** | `/opt/oca-addons/` (à plat) | dépôts OCA populaires, branche 18.0 |
 
-Les dépôts OCA clonés (branche `19.0`, clone tolérant — un dépôt pas encore
-porté sur 19.0 est ignoré) :
+Les dépôts OCA clonés (branche `18.0`, clone tolérant — un dépôt pas encore
+porté sur 18.0 est ignoré) :
 
 `server-auth` (dont `auth_oidc`), `server-tools`, `server-ux`, `server-brand`,
 `web` (dont `web_responsive`), `website`, `partner-contact`,
 `reporting-engine`, `queue`, `social`, `mail`, `knowledge`, `crm`, `contract`
-(dont `subscription_oca`), `account-financial-tools`,
+(dont **`subscription_oca`** = ABONNEMENTS), `account-financial-tools`,
 `account-financial-reporting`, `account-invoicing`, `bank-payment`,
 `sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`,
-`project`, `mis-builder`.
+`project`, `mis-builder`, **`l10n-france`**, **`edi`**, **`edi-framework`**
+(= FACTURATION ÉLECTRONIQUE FR / PDP : Factur-X, Chorus Pro, cadre EDI
+`account_edi`).
 
 Couvre les 10 dépôts de la [liste « must-have OCA »](https://www.odoo-community.org/list-of-must-have-oca-modules)
 (`web_responsive`, `mail_debrand`, `queue_job`, `report_xlsx`, …).
