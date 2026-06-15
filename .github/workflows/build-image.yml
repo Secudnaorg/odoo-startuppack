@@ -33,6 +33,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Le module maison sp_auth_oidc_roles est un sous-module git (repo
+          # Startuppack/sp_auth_oidc_roles) → indispensable pour le COPY addons/.
+          submodules: recursive
 
       - name: Prepare image metadata
         id: meta
