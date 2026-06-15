@@ -1,4 +1,4 @@
 [submodule "addons/sp_auth_oidc_roles"]
 	path = addons/sp_auth_oidc_roles
-	url = git@github.com:Startuppack/sp_auth_oidc_roles.git
+	url = git@github.com:Startuppack/odoo-oidc-sso.git
 	branch = main
