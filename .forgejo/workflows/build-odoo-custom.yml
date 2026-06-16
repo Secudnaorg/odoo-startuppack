@@ -16,6 +16,8 @@ jobs:
     env:
       DOCKER_BUILDKIT: "0"
     steps:
+      - name: Submodule public via HTTPS (pas de clé SSH GitHub sur le runner)
+        run: git config --global url."https://github.com/".insteadOf "git@github.com:"
       - uses: actions/checkout@v4
         with:
           submodules: recursive
