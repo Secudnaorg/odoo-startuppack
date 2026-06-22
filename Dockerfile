@@ -33,7 +33,8 @@ RUN mkdir -p /opt/oca-addons
 #    ÉLECTRONIQUE FR / PDP (Factur-X, Chorus Pro, cadre EDI account_edi).
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends git ca-certificates; \
+    apt-get install -y --no-install-recommends git ca-certificates \
+        ghostscript fonts-dejavu fonts-liberation fontconfig; \
     for repo in \
         server-auth server-tools server-ux server-brand web website \
         partner-contact reporting-engine queue social mail knowledge \
@@ -70,5 +71,12 @@ COPY addons/ /opt/oca-addons/
 # /opt/oca-addons à ajouter à --addons-path côté chart (en plus de
 # /mnt/extra-addons). Le module auth_oidc en fait partie (dépôt server-auth).
 RUN chown -R odoo:odoo /opt/oca-addons
+
+# Cache fontconfig inscriptible. L'utilisateur odoo a HOME=/ (non inscriptible)
+# et aucun XDG_CACHE_HOME -> wkhtmltopdf/ghostscript échouent avec
+# "Fontconfig error: No writable cache directories", ce qui casse la génération
+# du PDF/A-3 Factur-X (le PDP rejette alors un PDF brut sans factur-x.xml).
+# /var/lib/odoo est inscriptible par odoo (uid 101) ; fontconfig y crée son cache.
+ENV XDG_CACHE_HOME=/var/lib/odoo/.cache
 
 USER odoo
