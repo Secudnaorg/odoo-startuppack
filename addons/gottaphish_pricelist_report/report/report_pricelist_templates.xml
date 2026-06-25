@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_pricelist_page_description"
+              inherit_id="product.report_pricelist_page">
+        <!-- Affiche la description du devis sous le nom du produit, dans la
+             premiere colonne du tableau (rendu HTML preview et PDF). -->
+        <xpath expr="//t[@t-foreach='products']/tr/td[1]" position="inside">
+            <div t-if="product.get('description_sale')" class="text-muted">
+                <small t-out="product['description_sale']"/>
+            </div>
+        </xpath>
+    </template>
+</odoo>
