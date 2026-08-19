@@ -9,6 +9,26 @@ from facturx import generate_from_file
 class AccountMove(models.Model):
     _inherit = "account.move"
 
+    def _get_en16931_invoice_bin(self, invoice_format, b64=False):
+        """Use the Chorus-Pro CII conventions for French public recipients.
+
+        The public-sector gateway expects the legacy Chorus profile (A1/A2) and
+        SIRET legal identifiers.  ``l10n_fr_account_invoice_en16931`` already
+        implements this variant behind the ``chorus_old_xml_syntax`` context;
+        apply it automatically to outgoing Factur-X documents addressed to a
+        public entity.
+        """
+        self.ensure_one()
+        if (
+            invoice_format == "facturx"
+            and getattr(self, "fr_directory_partner_entity_type", False) == "public"
+            and not self.env.context.get("chorus_old_xml_syntax")
+        ):
+            return super(
+                AccountMove, self.with_context(chorus_old_xml_syntax=True)
+            )._get_en16931_invoice_bin(invoice_format, b64=b64)
+        return super()._get_en16931_invoice_bin(invoice_format, b64=b64)
+
     def _regular_pdf_invoice_to_en16931_pdf_invoice(self, pdf_bytesio, invoice_format):
         """Embed Factur-X XML without corrupting Odoo's in-memory PDF stream.
 
