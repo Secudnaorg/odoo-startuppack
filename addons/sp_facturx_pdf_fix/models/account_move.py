@@ -10,23 +10,20 @@ class AccountMove(models.Model):
     _inherit = "account.move"
 
     def _get_en16931_invoice_bin(self, invoice_format, b64=False):
-        """Use the Chorus-Pro CII conventions for French public recipients.
+        """Pass-through to the standard EN16931 generation.
 
-        The public-sector gateway expects the legacy Chorus profile (A1/A2) and
-        SIRET legal identifiers.  ``l10n_fr_account_invoice_en16931`` already
-        implements this variant behind the ``chorus_old_xml_syntax`` context;
-        apply it automatically to outgoing Factur-X documents addressed to a
-        public entity.
+        Kept as an explicit hook. We do NOT force ``chorus_old_xml_syntax``
+        (SIRET legal identity) for public recipients: the accredited PDP
+        (SuperPDP) binds the session to the SIREN and rejects a seller whose
+        legal identity is the SIRET. The standard Factur-X profile already
+        carries SIREN as SpecifiedLegalOrganization and SIRET as GlobalID.
         """
         self.ensure_one()
-        if (
-            invoice_format == "facturx"
-            and getattr(self, "fr_directory_partner_entity_type", False) == "public"
-            and not self.env.context.get("chorus_old_xml_syntax")
-        ):
-            return super(
-                AccountMove, self.with_context(chorus_old_xml_syntax=True)
-            )._get_en16931_invoice_bin(invoice_format, b64=b64)
+        # SuperPDP requires the seller's SpecifiedLegalOrganization to be the SIREN
+        # (schemeID 0002), with the SIRET carried as GlobalID (0009). Forcing
+        # chorus_old_xml_syntax put the SIRET as the legal identity, which the PDP
+        # rejects (400: session company SIREN != invoice seller SIRET). Verified
+        # against the accepted INV/2026/00006 (SIREN). Keep the standard profile.
         return super()._get_en16931_invoice_bin(invoice_format, b64=b64)
 
     def _regular_pdf_invoice_to_en16931_pdf_invoice(self, pdf_bytesio, invoice_format):
@@ -45,7 +42,7 @@ class AccountMove(models.Model):
 
         pdf_metadata = self._prepare_facturx_pdf_metadata()
         lang = self.partner_id.lang and self.partner_id.lang.replace("_", "-") or None
-        xml_bytes, attachments = self.generate_en16931_xml(
+        xml_bytes, _data_dict, attachments = self.generate_en16931_xml(
             "factur-x", "extended", invoice_format
         )
 
