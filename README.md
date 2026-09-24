@@ -1,73 +1,103 @@
-# odoo-custom — image Odoo Startup Pack
+# odoo-custom — Startup Pack Odoo image
 
-Image Odoo personnalisée utilisée par le chart `dna-platform`.
+Custom Odoo image used by the `dna-platform` chart.
 
-## Contenu
+## Contents
 
-Base **`odoo:18`** + :
+Base **`docker.io/odoo:18`** plus:
 
-| Élément | Chemin dans l'image | Source |
+| Item | Path in the image | Source |
 |---|---|---|
-| `python-jose[cryptography]` | site-packages | pip (dép. d'`auth_oidc`) |
-| `pyfrctc`, `saxonche`, `factur-x`, `packaging` | site-packages | pip (e-facture PDP SuperPDP) |
-| **Bundle OCA** | `/opt/oca-addons/` (à plat) | dépôts OCA populaires, branche 18.0 |
-| **`fr-einvoicing`** (Akretion) | `/opt/oca-addons/` | `akretion/fr-einvoicing` 18.0 (connecteur PDP `l10n_fr_einvoicing`) |
-| **`superpdp_saxon_subprocess`** | `/opt/oca-addons/` | `addons/` (correctif réception e-facture) |
+| `python-jose[cryptography]` | site-packages | pip (dependency of `auth_oidc`) |
+| `pyfrctc`, `factur-x`, `packaging`, `requests_oauthlib` | site-packages | pip (FR e-invoicing via the SuperPDP PDP) |
+| **OCA bundle** | `/opt/oca-addons/` (flat) | OCA repos, **pinned to a commit** |
+| **`fr-einvoicing`** (Akretion) | `/opt/oca-addons/` | `akretion/fr-einvoicing`, pinned (PDP connector `l10n_fr_einvoicing`) |
+| **Local Startup Pack addons** | `/opt/oca-addons/` | `addons/` (see below) |
 
-Les dépôts OCA clonés (branche `18.0`, clone tolérant — un dépôt pas encore
-porté sur 18.0 est ignoré) :
+> **Note** — Saxon is **no longer** installed in-process (`saxonche` was dropped).
+> Schematron validation now runs in a **Saxon Server sidecar** reached over HTTP
+> (see [E-invoicing](#e-invoicing-pdp--superpdp--afnor) below).
 
-`server-auth` (dont `auth_oidc`), `server-tools`, `server-ux`, `server-brand`,
-`web` (dont `web_responsive`), `website`, `partner-contact`,
-`reporting-engine`, `queue`, `social`, `mail`, `knowledge`, `crm`, `contract`
-(dont **`subscription_oca`** = ABONNEMENTS), `account-financial-tools`,
+### Pinned OCA / Akretion repositories
+
+Every repo is **pinned to an exact commit** (coherent snapshot, 2026-09-24) rather
+than tracking the floating `18.0` branch. This gives reproducible builds and avoids
+the inter-repo drift that used to break `l10n_fr_einvoicing_import`. To upgrade,
+bump the commit SHAs in the `Dockerfile` clone loop.
+
+`server-auth` (incl. `auth_oidc`), `server-tools`, `server-ux`, `server-brand`,
+`web` (incl. `web_responsive`), `website`, `partner-contact`, `reporting-engine`,
+`queue`, `social`, `mail`, `knowledge`, `crm`, `contract` (incl.
+**`subscription_oca`** = SUBSCRIPTIONS), `account-financial-tools`,
 `account-financial-reporting`, `account-invoicing`, `bank-payment`,
-`sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`,
-`project`, `mis-builder`, **`l10n-france`**, **`edi`**, **`edi-framework`**
-(= FACTURATION ÉLECTRONIQUE FR / PDP : Factur-X, Chorus Pro, cadre EDI
-`account_edi`), **`community-data-files`** (`base_unece`/`account_tax_unece` —
-requis par l'import de factures).
+`sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`, `project`,
+`mis-builder`, **`l10n-france`**, **`edi`**, **`edi-framework`** (= FR ELECTRONIC
+INVOICING / PDP: Factur-X, Chorus Pro, the `account_edi` EDI framework),
+**`community-data-files`** (`base_unece` / `account_tax_unece`, required by the
+invoice import).
 
-### E-facturation PDP (SuperPDP / AFNOR) — envoi & réception
+### Local Startup Pack addons (`addons/`)
 
-En plus du bundle OCA, l'image embarque le connecteur **Akretion
-`fr-einvoicing`** (`l10n_fr_einvoicing`, `l10n_fr_einvoicing_import`) et le
-correctif maison **`superpdp_saxon_subprocess`** :
+Copied into `/opt/oca-addons/` (same `--addons-path` entry). All of them are
+**vendored directly in this repo** — there is no git submodule, so the build works
+from any fork/CI without submodule init or SSH keys.
 
-- **Saxon en sous-process** — `saxonche` (Saxon-C/GraalVM) est fork/thread-unsafe
-  et plante les workers Odoo (`graal_create_isolate`) ; le module exécute la
-  validation schematron dans un `python3` neuf. Couvre `pyfrctc` et `factur-x`.
-- **Normalisation UBL** — réécrit l'UBL sans préfixes (`cbc:`/`cac:`) émis par le
-  PDP avant le parseur OCA `account_invoice_import_ubl`.
+| Module | Role |
+|---|---|
+| `auth_oidc` | Patched OCA `auth_oidc` (OIDC login). |
+| `sp_auth_oidc_roles` | Maps Keycloak roles (from the OIDC token) to Odoo groups **at login**, plus IdP-initiated logout (RP-initiated + OIDC back-channel). Source of truth = the token (no cron, no SQL trigger). Install/upgrade from the chart via `-i/-u sp_auth_oidc_roles`. |
+| `sp_facturx_pdf_fix` | Generates valid Factur-X PDF/A-3 from Odoo report streams. |
+| `superpdp_saxon_subprocess` | Normalises PDP UBL (strips the `cbc:` / `cac:` prefixes) before the OCA `account_invoice_import_ubl` parser. Required for e-invoice **reception**. |
 
-Détails complets, schémas de flux et limites sandbox : **[`docs/SUPERPDP.md`](docs/SUPERPDP.md)**.
-Bugs amont remontés : `akretion/pyfrctc#3`, `akretion/fr-einvoicing#9`.
+### E-invoicing (PDP / SuperPDP / AFNOR) — send & receive
 
-Couvre les 10 dépôts de la [liste « must-have OCA »](https://www.odoo-community.org/list-of-must-have-oca-modules)
+On top of the OCA bundle, the image ships the Akretion **`fr-einvoicing`**
+connector (`l10n_fr_einvoicing`, `l10n_fr_einvoicing_import`) and the in-house
+`superpdp_saxon_subprocess` normaliser.
+
+Schematron validation (`pyfrctc`, `factur-x`) runs against an **external Saxon
+Server** rather than the in-process `saxonche` (Saxon-C / GraalVM), which is
+fork/thread-unsafe and crashed the Odoo workers (`graal_create_isolate`). The
+Saxon Server runs as a **sidecar container** next to Odoo and is reached over HTTP
+— it is wired in the SRE deployment (`sre/hetzner/infra/internal/odoo18/odoo.yml`),
+not in this image.
+
+Full details, flow diagrams and sandbox limits: **[`docs/SUPERPDP.md`](docs/SUPERPDP.md)**.
+Upstream bugs reported: `akretion/pyfrctc#3`, `akretion/fr-einvoicing#9`.
+
+Covers the 10 repos of the [OCA "must-have" list](https://www.odoo-community.org/list-of-must-have-oca-modules)
 (`web_responsive`, `mail_debrand`, `queue_job`, `report_xlsx`, …).
 
-⚠️ Les modules sont **disponibles, pas installés** — un admin les active
-depuis Odoo > Apps. Certains modules réclament des paquets Python
-supplémentaires (`external_dependencies`) à ajouter au besoin.
+> ⚠️ Modules are **available, not installed** — an admin enables them from
+> Odoo > Apps. Some modules require extra Python packages (`external_dependencies`);
+> add them as needed.
 
 ## Build
 
-Automatique via GitHub Actions (`.github/workflows/build-image.yml`) à chaque
-push sur `main` — poussé sur **Harbor**, comme l'image `onboarding_platform` :
+**GitHub Actions** (`.github/workflows/build-image.yml`) on every push to `main`,
+pushed to **Harbor**:
 
 ```
 public-harbor.gottaphish.com/startuppack/odoo-custom:latest
 public-harbor.gottaphish.com/startuppack/odoo-custom:<sha7>
 ```
 
-Requiert les secrets `HARBOR_USERNAME` / `HARBOR_PASSWORD` (secrets
-d'organisation, ou à ajouter au repo).
+Requires the `HARBOR_USERNAME` / `HARBOR_PASSWORD` secrets (org secrets, or added
+to the repo).
 
-## Utilisation côté chart
+The image is also built by an **internal Jenkins pipeline** from the
+`Secudnaorg/odoo-startuppack` fork (podman). Two things make this fork-based build
+work out of the box: the base image is **fully qualified** (`docker.io/odoo:18`,
+because podman does not assume `docker.io` for short names), and every local addon
+is **vendored** (no submodule to init).
 
-Dans `dna-platform`, pointer `odoo.image` sur
-`public-harbor.gottaphish.com/startuppack/odoo-custom:latest` et ajouter
-`/opt/oca-addons` à `--addons-path`. Installer `auth_oidc` via `-i`.
+## Chart usage
 
-Le pull est couvert par l'`imagePullSecret` Harbor existant
-(`harbor-startuppack-pull`) déjà présent dans les namespaces tenants.
+In `dna-platform`, point `odoo.image` at
+`public-harbor.gottaphish.com/startuppack/odoo-custom:latest`, add
+`/opt/oca-addons` to `--addons-path`, and install `auth_oidc` + `sp_auth_oidc_roles`
+via `-i`. For e-invoicing reception/validation, the **Saxon Server sidecar** must be
+present (see the SRE deployment).
+
+The pull is covered by the existing Harbor `imagePullSecret`
+(`harbor-startuppack-pull`) already present in tenant namespaces.
