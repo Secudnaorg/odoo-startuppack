@@ -16,8 +16,7 @@ USER root
 RUN pip3 install --no-cache-dir --break-system-packages \
     "python-jose[cryptography]" \
     packaging \
-    "pyfrctc>=0.10" \
-    saxonche \
+    "pyfrctc>=0.22" \
     "factur-x" \
     requests_oauthlib
 
@@ -31,29 +30,52 @@ RUN mkdir -p /opt/oca-addons
 #  - `contract` fournit subscription_oca (ABONNEMENTS).
 #  - `l10n-france`, `edi`, `edi-framework` fournissent la FACTURATION
 #    ÉLECTRONIQUE FR / PDP (Factur-X, Chorus Pro, cadre EDI account_edi).
+# Dépôts OCA + akretion ÉPINGLÉS à un commit (snapshot cohérent 2026-09-24) :
+# reproductibilité + évite la dérive inter-dépôts qui cassait l10n_fr_einvoicing_import.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends git ca-certificates \
         ghostscript fonts-dejavu fonts-liberation fontconfig; \
-    for repo in \
-        server-auth server-tools server-ux server-brand web website \
-        partner-contact reporting-engine queue social mail knowledge \
-        crm contract \
-        account-financial-tools account-financial-reporting account-invoicing \
-        bank-payment sale-workflow purchase-workflow \
-        stock-logistics-warehouse hr project mis-builder \
-        l10n-france edi edi-framework community-data-files ; do \
-      if git clone --depth 1 --branch 18.0 "https://github.com/OCA/$repo.git" "/tmp/oca-$repo" 2>/dev/null; then \
-        cp -rn /tmp/oca-$repo/*/ /opt/oca-addons/ 2>/dev/null || true; \
-        rm -rf "/tmp/oca-$repo"; \
-        echo "OCA $repo : cloné (18.0)"; \
-      else \
-        echo "OCA $repo : pas de branche 18.0 — ignoré"; \
-      fi; \
+    for spec in \
+      "https://github.com/OCA/server-auth.git|880317035e338f45ccc76e43c000ed2df62d306a" \
+      "https://github.com/OCA/server-tools.git|f2de15fa429cc555e6367ed53da063f184b2bc5c" \
+      "https://github.com/OCA/server-ux.git|5a67ed407c07160ee1b4fc74b8d2e6eb5507fa2b" \
+      "https://github.com/OCA/server-brand.git|c296e5a6284a7bf7f6fe8f941685cbf31f89375a" \
+      "https://github.com/OCA/web.git|f9eb80e0da0dce4d67edb1237293364237f96a95" \
+      "https://github.com/OCA/website.git|7e44dc36e688fea2f8971051dc4170d1e0951328" \
+      "https://github.com/OCA/partner-contact.git|78a933a8702a55ee2880d12bbe0746a150d76377" \
+      "https://github.com/OCA/reporting-engine.git|7a156caae6558276408854ef26b729331e974361" \
+      "https://github.com/OCA/queue.git|d3ce20aa625fc4ee4a9984bf0b4dd6196fcfc0ed" \
+      "https://github.com/OCA/social.git|eeee83eb0bf79b74c0c4ab6f6fdb57806c8b49e8" \
+      "https://github.com/OCA/mail.git|81977d4e3919b7e87f229f4570cdbc4dee9ebe84" \
+      "https://github.com/OCA/knowledge.git|c6ea66af11876215b1aaac68975fa6cbcd586e57" \
+      "https://github.com/OCA/crm.git|07c248596b687fb71e74fefe1fa2e100068ac39d" \
+      "https://github.com/OCA/contract.git|14b3b89b55f481427fd08bf350ef68d320e8903a" \
+      "https://github.com/OCA/account-financial-tools.git|e4c1b86aa0a61d9f484c1a7e9830a63f5e6a2233" \
+      "https://github.com/OCA/account-financial-reporting.git|9291961e21c9af317f4972dd90e877730759a39f" \
+      "https://github.com/OCA/account-invoicing.git|4a634ffce03546de8220e8dcf57b9fc159bf0b67" \
+      "https://github.com/OCA/bank-payment.git|57975b134737b71eb9762f24746422fe828133a5" \
+      "https://github.com/OCA/sale-workflow.git|a86d8041599b49efb2fc35e36a3905ebcc1ded0f" \
+      "https://github.com/OCA/purchase-workflow.git|80ef750ffe0f49addf3289a50afc7618a60782f4" \
+      "https://github.com/OCA/stock-logistics-warehouse.git|53d75c6399df1a72611f1fa1a162e5ce9da75d18" \
+      "https://github.com/OCA/hr.git|33ad2e23b682d6abcbbdc98ac4b6807fa2e180fa" \
+      "https://github.com/OCA/project.git|2780d8a3041a97966cd808fd253a67aea66bc40b" \
+      "https://github.com/OCA/mis-builder.git|4f9eef0954af7dfdb1d13451f4d860602b074cda" \
+      "https://github.com/OCA/l10n-france.git|24a69693f421503f8798ada6af0c046cb3f054d0" \
+      "https://github.com/OCA/edi.git|a43bfc5f68d4f9d307337ec64e9a4840639a7c0c" \
+      "https://github.com/OCA/edi-framework.git|9f8ad18bfcc8e3b6030ef7aecad51b5115233780" \
+      "https://github.com/OCA/community-data-files.git|d32b2cc1ca50bfb304cb4c6cf25f99977383426d" \
+      "https://github.com/akretion/fr-einvoicing.git|7d841d914bcedebfc17cabae936a8113fa2785d9" \
+    ; do \
+      url="${spec%%|*}"; sha="${spec##*|}"; name="$(basename "$url" .git)"; \
+      mkdir -p "/tmp/oca-$name"; \
+      git -C "/tmp/oca-$name" init -q; \
+      git -C "/tmp/oca-$name" remote add origin "$url"; \
+      git -C "/tmp/oca-$name" fetch --depth 1 origin "$sha"; \
+      git -C "/tmp/oca-$name" checkout -q FETCH_HEAD; \
+      cp -rn /tmp/oca-$name/*/ /opt/oca-addons/ 2>/dev/null || true; \
+      rm -rf "/tmp/oca-$name"; \
     done; \
-    git clone --depth 1 --branch 18.0 https://github.com/akretion/fr-einvoicing.git /tmp/akretion-fr-einvoicing \
-      && cp -rn /tmp/akretion-fr-einvoicing/*/ /opt/oca-addons/ 2>/dev/null || true; \
-    rm -rf /tmp/akretion-fr-einvoicing; \
     rm -rf /opt/oca-addons/setup /opt/oca-addons/.github; \
     apt-get purge -y git; apt-get autoremove -y; \
     rm -rf /var/lib/apt/lists/* /tmp/oca-*
