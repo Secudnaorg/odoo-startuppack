@@ -29,12 +29,19 @@ bump the commit SHAs in the `Dockerfile` clone loop.
 `web` (incl. `web_responsive`), `website`, `partner-contact`, `reporting-engine`,
 `queue`, `social`, `mail`, `knowledge`, `crm`, `contract` (incl.
 **`subscription_oca`** = SUBSCRIPTIONS), `account-financial-tools`,
-`account-financial-reporting`, `account-invoicing`, `bank-payment`,
+`account-financial-reporting`, `account-invoicing`, `bank-payment`, `account-payment`,
 `sale-workflow`, `purchase-workflow`, `stock-logistics-warehouse`, `hr`, `project`,
 `mis-builder`, **`l10n-france`**, **`edi`**, **`edi-framework`** (= FR ELECTRONIC
 INVOICING / PDP: Factur-X, Chorus Pro, the `account_edi` EDI framework),
-**`community-data-files`** (`base_unece` / `account_tax_unece`, required by the
-invoice import).
+**`community-data-files`** (`base_unece` / `account_tax_unece`) and
+**`intrastat-extrastat`** (`intrastat_base`).
+
+> **`account-payment` + `intrastat-extrastat` complete the EN16931 closure.**
+> `l10n_fr_einvoicing` pulls `account_invoice_en16931`, which needs `intrastat_base`
+> and `account_payment_unece` → `account_payment_method_base`. Those two modules used
+> to exist **only in the data volume** (`/var/lib/odoo/addons/18.0`), so
+> `l10n_fr_einvoicing_import` failed to load from a fresh image. They are now baked
+> into the image — everything the chain needs ships in the image, nothing in the PVC.
 
 ### Local Startup Pack addons (`addons/`)
 
@@ -55,12 +62,51 @@ On top of the OCA bundle, the image ships the Akretion **`fr-einvoicing`**
 connector (`l10n_fr_einvoicing`, `l10n_fr_einvoicing_import`) and the in-house
 `superpdp_saxon_subprocess` normaliser.
 
-Schematron validation (`pyfrctc`, `factur-x`) runs against an **external Saxon
-Server** rather than the in-process `saxonche` (Saxon-C / GraalVM), which is
-fork/thread-unsafe and crashed the Odoo workers (`graal_create_isolate`). The
-Saxon Server runs as a **sidecar container** next to Odoo and is reached over HTTP
-— it is wired in the SRE deployment (`sre/hetzner/infra/internal/odoo18/odoo.yml`),
-not in this image.
+#### Saxon Server (schematron validation)
+
+`pyfrctc` validates the Factur-X / e-reporting XML against the AFNOR schematrons
+with Saxon (XSLT 2.0/3.0). It **no longer** runs Saxon in-process via `saxonche`
+(Saxon-C / GraalVM): that build is fork/thread-unsafe and crashed the Odoo workers
+(`graal_create_isolate`) — which is why the e-invoicing crons (35/36/37) were
+disabled (see `akretion/pyfrctc#3`). Instead, `pyfrctc` 0.22 POSTs the XML to an
+external **Saxon Server** over HTTP.
+
+**How `pyfrctc` finds it — no config needed.** It defaults to:
+
+```python
+SAXON_SERVER_DEFAULT_URL = "http://localhost:5000/transform"   # pyfrctc/pyfrctc.py
+```
+
+So the only requirement is a Saxon Server listening on `localhost:5000` **in the
+same pod** as Odoo (shared `localhost`).
+
+**How to implement it** — add the sidecar to the Odoo pod. It is *not* part of this
+image; it is a separate upstream image ([`willemvlh/saxon-server`](https://github.com/willemvlh/saxon-server)):
+
+```yaml
+# Odoo Deployment -> spec.template.spec.containers: (alongside the `odoo` container)
+- name: saxon-server
+  image: ghcr.io/willemvlh/saxon-server:latest
+  args: ["--insecure", "--disable-frontend"]   # plain HTTP, no web UI
+  ports:
+    - { containerPort: 5000, name: saxon }
+  env:
+    - { name: JAVA_OPTS, value: "-Xmx1g" }
+  readinessProbe:
+    tcpSocket: { port: 5000 }
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  resources:
+    requests: { cpu: 50m, memory: 256Mi }
+    limits:   { memory: 1Gi }
+```
+
+Odoo and the sidecar share `localhost`, so `pyfrctc` reaches
+`http://localhost:5000/transform` with zero Odoo-side configuration. The reference
+wiring lives in the SRE repo (`sre/hetzner/infra/internal/odoo18/odoo.yml`).
+
+> Since Saxon now runs out-of-process, the e-invoicing crons disabled to dodge the
+> `saxonche` crash can be re-enabled once reception is validated end-to-end.
 
 Full details, flow diagrams and sandbox limits: **[`docs/SUPERPDP.md`](docs/SUPERPDP.md)**.
 Upstream bugs reported: `akretion/pyfrctc#3`, `akretion/fr-einvoicing#9`.
