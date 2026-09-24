@@ -55,6 +55,8 @@ RUN set -eux; \
       "https://github.com/OCA/account-financial-reporting.git|9291961e21c9af317f4972dd90e877730759a39f" \
       "https://github.com/OCA/account-invoicing.git|4a634ffce03546de8220e8dcf57b9fc159bf0b67" \
       "https://github.com/OCA/bank-payment.git|57975b134737b71eb9762f24746422fe828133a5" \
+      "https://github.com/OCA/account-payment.git|8de2cff9d2b0c9b388ef9569823420c998dff868" \
+      "https://github.com/OCA/intrastat-extrastat.git|917cea1f86a5e3bcec496f92005db31fbcdfbd73" \
       "https://github.com/OCA/sale-workflow.git|a86d8041599b49efb2fc35e36a3905ebcc1ded0f" \
       "https://github.com/OCA/purchase-workflow.git|80ef750ffe0f49addf3289a50afc7618a60782f4" \
       "https://github.com/OCA/stock-logistics-warehouse.git|53d75c6399df1a72611f1fa1a162e5ce9da75d18" \
@@ -84,10 +86,11 @@ RUN set -eux; \
 # --addons-path).
 #  - `sp_auth_oidc_roles` mappe les rôles Keycloak du token OIDC vers les groupes
 #    Odoo AU LOGIN — installé/maj côté chart via `-i/-u sp_auth_oidc_roles`.
-#  - `superpdp_saxon_subprocess` exécute la validation Saxon (saxonche) en
-#    sous-process (sinon crash GraalVM fork/thread-unsafe dans les workers Odoo)
-#    et normalise l'UBL sans préfixes du PDP avant l'import OCA. Requis pour la
-#    RÉCEPTION e-facture. Voir docs/SUPERPDP.md.
+#  - `superpdp_saxon_subprocess` normalise l'UBL sans préfixes (cbc:/cac:) émis par
+#    le PDP avant l'import OCA `account_invoice_import_ubl`. Requis pour la RÉCEPTION
+#    e-facture. La validation Saxon/schematron passe désormais par le sidecar Saxon
+#    Server (pyfrctc 0.22 -> http://localhost:5000/transform), plus de saxonche
+#    in-process (crash GraalVM fork/thread-unsafe). Voir docs/SUPERPDP.md.
 COPY addons/ /opt/oca-addons/
 
 # /opt/oca-addons à ajouter à --addons-path côté chart (en plus de
@@ -100,5 +103,15 @@ RUN chown -R odoo:odoo /opt/oca-addons
 # du PDF/A-3 Factur-X (le PDP rejette alors un PDF brut sans factur-x.xml).
 # /var/lib/odoo est inscriptible par odoo (uid 101) ; fontconfig y crée son cache.
 ENV XDG_CACHE_HOME=/var/lib/odoo/.cache
+
+# odoo.conf de base : expose le bundle OCA aplati (/opt/oca-addons) sur l'addons_path
+# pour que l'image soit AUTO-SUFFISANTE (tous les modules sont dans l'image, pas dans
+# un volume). Un odoo.conf monté (ex. ConfigMap k8s) surcharge ce fichier au runtime.
+# NB: Odoo ajoute aussi automatiquement <data_dir>/addons/18.0.
+RUN printf '%s\n' \
+    '[options]' \
+    'addons_path = /usr/lib/python3/dist-packages/odoo/addons,/mnt/extra-addons,/opt/oca-addons' \
+    'data_dir = /var/lib/odoo' \
+    > /etc/odoo/odoo.conf
 
 USER odoo
