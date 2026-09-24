@@ -4,7 +4,7 @@
 # dépôt `contract`) et la facturation électronique FR / PDP (Factur-X,
 # Chorus Pro, EDI — dépôts `l10n-france`, `edi`, `edi-framework`).
 # Construite par GitHub Actions.
-FROM odoo:18
+FROM docker.io/odoo:18
 
 USER root
 
