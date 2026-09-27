@@ -30,6 +30,10 @@ RUN mkdir -p /opt/oca-addons
 #  - `contract` fournit subscription_oca (ABONNEMENTS).
 #  - `l10n-france`, `edi`, `edi-framework` fournissent la FACTURATION
 #    ÉLECTRONIQUE FR / PDP (Factur-X, Chorus Pro, cadre EDI account_edi).
+#  - `account-financial-reporting` + `mis-builder` : RAPPORTS FINANCIERS
+#    (Grand livre, Balance, Bilan, Compte de résultat) — OSS vs Enterprise.
+#  - `account-reconcile` : LETTRAGE avancé / rapprochement bancaire.
+#  - `bank-statement-import` : IMPORT de relevés bancaires (CSV/OFX/QIF).
 # Dépôts OCA + akretion ÉPINGLÉS à un commit (snapshot cohérent 2026-09-24) :
 # reproductibilité + évite la dérive inter-dépôts qui cassait l10n_fr_einvoicing_import.
 RUN set -eux; \
@@ -54,7 +58,9 @@ RUN set -eux; \
       "https://github.com/OCA/account-financial-tools.git|e4c1b86aa0a61d9f484c1a7e9830a63f5e6a2233" \
       "https://github.com/OCA/account-financial-reporting.git|9291961e21c9af317f4972dd90e877730759a39f" \
       "https://github.com/OCA/account-invoicing.git|4a634ffce03546de8220e8dcf57b9fc159bf0b67" \
+      "https://github.com/OCA/account-reconcile.git|bfc46f80626c0669ddd7a296f10a864bc36d6abb" \
       "https://github.com/OCA/bank-payment.git|57975b134737b71eb9762f24746422fe828133a5" \
+      "https://github.com/OCA/bank-statement-import.git|01be32ea73e485e9b2495ea80fcce934badedeea" \
       "https://github.com/OCA/account-payment.git|8de2cff9d2b0c9b388ef9569823420c998dff868" \
       "https://github.com/OCA/intrastat-extrastat.git|917cea1f86a5e3bcec496f92005db31fbcdfbd73" \
       "https://github.com/OCA/sale-workflow.git|a86d8041599b49efb2fc35e36a3905ebcc1ded0f" \
