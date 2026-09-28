@@ -34,6 +34,8 @@ RUN mkdir -p /opt/oca-addons
 #    (Grand livre, Balance, Bilan, Compte de résultat) — OSS vs Enterprise.
 #  - `account-reconcile` : LETTRAGE avancé / rapprochement bancaire.
 #  - `bank-statement-import` : IMPORT de relevés bancaires (CSV/OFX/QIF).
+#  - `payroll` fournit hr.payslip (PAIE / bulletins de salaire, remplace le
+#    module hr_payroll Enterprise). Dépend de hr_work_entry_holidays + mail.
 # Dépôts OCA + akretion ÉPINGLÉS à un commit (snapshot cohérent 2026-09-24) :
 # reproductibilité + évite la dérive inter-dépôts qui cassait l10n_fr_einvoicing_import.
 RUN set -eux; \
@@ -67,6 +69,7 @@ RUN set -eux; \
       "https://github.com/OCA/purchase-workflow.git|80ef750ffe0f49addf3289a50afc7618a60782f4" \
       "https://github.com/OCA/stock-logistics-warehouse.git|53d75c6399df1a72611f1fa1a162e5ce9da75d18" \
       "https://github.com/OCA/hr.git|33ad2e23b682d6abcbbdc98ac4b6807fa2e180fa" \
+      "https://github.com/OCA/payroll.git|4c71cd42e46a09a7512d92f5c63c0a9f7c26ad3e" \
       "https://github.com/OCA/project.git|2780d8a3041a97966cd808fd253a67aea66bc40b" \
       "https://github.com/OCA/mis-builder.git|4f9eef0954af7dfdb1d13451f4d860602b074cda" \
       "https://github.com/OCA/l10n-france.git|24a69693f421503f8798ada6af0c046cb3f054d0" \
